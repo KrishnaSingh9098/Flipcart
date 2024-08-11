@@ -1,74 +1,13 @@
-// import React from 'react'
-// import { useState } from 'react';
-
-// import {Box,Button,Typography , styled} from '@mui/material'
-// import { ShoppingCart } from '@mui/icons-material';
-
-// //componnents imported
-// import LoginDialog from '../login/LoginDialog';
-
-// const Wrapper = styled(Box)`
-// display:flex;
-// margin:0 3%0 auto;
-// & > button, & > p , & > div{
-// margin-right: 40px;
-// font-size:14px;
-// }
-// `
-// const Container = styled(Box)`
-// display:flex;
-// `
-// const LoginButton = styled(Button)(({ theme }) => ({
-//     color: '#2874f0',
-//     background: '#FFFFFF',
-//     textTransform: 'none',
-//     fontWeight: 600,
-//     borderRadius: 2,
-//     padding: '5px 40px',
-//     height: 32,
-//     boxShadow: 'none',
-//     [theme.breakpoints.down('sm')]: {
-//         background: '#2874f0',
-//         color: '#FFFFFF'
-//     }
-// }));
-
-
-
-// const CustomButtons = () => {
-  
-//   const [openDialog, setOpenDialog] = useState(false);
-//   const handleOpenDialog = () => {
-//     setOpenDialog(true);
-//   };
-
-//   const handleCloseDialog = () => {
-//     setOpenDialog(false);
-//   };
-
-//   return (
-//     <Wrapper>
-//        <LoginButton variant="contained" onClick={handleOpenDialog}  >login</LoginButton>
-//        <Typography style={{ marginTop: 3, width: 135 }}>Become a Seller</Typography>
-//        <Typography style={{ marginTop: 3 }}>More</Typography>
-
-//        <Container>
-//          <ShoppingCart/>
-//         <Typography>Cart</Typography>
-//        </Container>
-//       <LoginDialog open={openDialog}  onClose={handleCloseDialog} />
-//     </Wrapper>
-//   )
-// }
-
-// export default CustomButtons
-
 import React, { useState } from 'react';
 import { Box, Button, Typography, styled, Menu, MenuItem, TextField } from '@mui/material';
-import { Category, ShoppingCart} from '@mui/icons-material';
-
-// Components imported
+import { ShoppingCart } from '@mui/icons-material';
 import LoginDialog from '../login/LoginDialog';
+import { createClient } from '@supabase/supabase-js';
+import axios from 'axios';
+
+const supaBaseUrl = 'https://rkgvxkbiemdkekqlkqdg.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZ3Z4a2JpZW1ka2VrcWxrcWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjI3NzM4NzQsImV4cCI6MjAzODM0OTg3NH0.VvccPqTIxhLtJotpE3Rn8zqQYpbkToKsYTcwW-PgTzo';
+const supaBase = createClient(supaBaseUrl, supabaseKey);
 
 const Wrapper = styled(Box)`
   display: flex;
@@ -126,17 +65,38 @@ const CustomButtons = () => {
   };
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value, files } = e.target;
+    setForm(prevForm => ({
+      ...prevForm,
+      [name]: files ? files[0] : value,
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Add form submission logic here
-    console.log(form);
-    setAnchorEl(null);
+
+    if (!form.image) {
+      alert('Please upload an image.');
+      return;
+    }
+
+    try {
+      const { data, error: uploadError } = await supaBase.storage.from('Krishna').upload(`product_images/${form.image.name}`, form.image);
+      
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const imageUrl = `${supaBaseUrl}/storage/v1/object/public/Krishna/product_images/${form.image.name}`;
+      console.log(imageUrl,'zzzz')
+      const response = await axios.post('http://localhost:5000/api/product', { ...form, image: imageUrl });
+
+      console.log(response.data);
+      setAnchorEl(null);
+    } catch (error) {
+      console.error('Error:', error.message);
+      alert('failed- hai')
+    }
   };
 
   return (
@@ -157,10 +117,10 @@ const CustomButtons = () => {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleCloseMenu}
-      > <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"><path d="M480-360 280-560h400L480-360Z"/></svg>
+      >
         <MenuItem>
           <form onSubmit={handleSubmit}>
-            <Box display="flex" flexDirection="column" width={200}>
+            <Box display="flex" flexDirection="column" width={300}>
               <TextField
                 label="Product Name"
                 name="productName"
@@ -180,18 +140,18 @@ const CustomButtons = () => {
                 rows={4}
               />
               <TextField
-              label="Price" 
-              name="price"
-              value={form.price}
-              onChange={handleChange}
-              required
+                label="Price" 
+                name="price"
+                value={form.price}
+                onChange={handleChange}
+                required
               />
               <TextField
-              label="Category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
+                label="Category"
+                name="category"
+                value={form.category}
+                onChange={handleChange}
+                required
               />
               <Box marginTop={2}>
                 <input
